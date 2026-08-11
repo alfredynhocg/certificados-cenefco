@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Mi perfil{% endblock %}
+{% block content %}
+<div class="max-w-lg mx-auto space-y-6">
+    <div class="mb-2">
+        <h1 class="text-xl font-semibold text-slate-800">Mi perfil</h1>
+        <p class="text-sm text-slate-500">
+            {{ user.username }}
+            <span class="badge {% if user.es_admin %}bg-brand-50 text-brand-700{% else %}bg-slate-100 text-slate-600{% endif %} ml-1">
+                {{ user.get_rol_display }}
+            </span>
+        </p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <p class="text-sm font-medium text-slate-700 mb-4">Datos personales</p>
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="perfil">
+            {% for field in form_perfil %}
+            <div>
+                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}<p class="text-xs text-red-600 mt-1">{% for e in field.errors %}{{ e }}{% endfor %}</p>{% endif %}
+            </div>
+            {% endfor %}
+            <button type="submit" class="w-full bg-brand-500 hover:bg-brand-600 text-white font-medium text-sm rounded-lg py-2.5 transition mt-2">
+                Guardar cambios
+            </button>
+        </form>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <p class="text-sm font-medium text-slate-700 mb-4">Cambiar contrasena</p>
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="password">
+            {% for field in form_password %}
+            <div>
+                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-1">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}<p class="text-xs text-slate-400 mt-1">{{ field.help_text|safe }}</p>{% endif %}
+                {% if field.errors %}<p class="text-xs text-red-600 mt-1">{% for e in field.errors %}{{ e }}{% endfor %}</p>{% endif %}
+            </div>
+            {% endfor %}
+            <button type="submit" class="w-full bg-slate-700 hover:bg-slate-800 text-white font-medium text-sm rounded-lg py-2.5 transition mt-2">
+                Actualizar contrasena
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

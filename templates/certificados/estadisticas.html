@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}Estadisticas{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex items-start justify-between gap-4 flex-wrap">
+    <div>
+        <h1 class="text-xl font-semibold text-slate-800">{% if user.es_admin %}Estadisticas generales{% else %}Mis estadisticas{% endif %}</h1>
+        <p class="text-sm text-slate-500">Resumen de certificados emitidos y estado de tus lotes.</p>
+    </div>
+    <div class="flex gap-2">
+        <a href="{% url 'exportar_estadisticas_excel' %}" class="inline-flex items-center gap-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-sm px-4 py-2.5 rounded-lg shadow-sm transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+            Exportar Excel
+        </a>
+        <a href="{% url 'exportar_estadisticas_pdf' %}" class="inline-flex items-center gap-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-sm px-4 py-2.5 rounded-lg shadow-sm transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+            Exportar PDF
+        </a>
+    </div>
+</div>
+
+<div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+        <p class="text-2xl font-semibold text-slate-800">{{ total_certificados }}</p>
+        <p class="text-xs text-slate-500">Certificados emitidos</p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+        <p class="text-2xl font-semibold text-slate-800">{{ total_participantes }}</p>
+        <p class="text-xs text-slate-500">Participantes inscritos</p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+        <p class="text-2xl font-semibold text-slate-800">{{ total_tipos_curso }}</p>
+        <p class="text-xs text-slate-500">Tipos de certificado (cursos distintos)</p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+        <p class="text-2xl font-semibold text-slate-800">{{ total_lotes_generados }}<span class="text-sm text-slate-400"> / {{ total_lotes }}</span></p>
+        <p class="text-xs text-slate-500">Lotes generados / total de lotes</p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+        <p class="text-2xl font-semibold text-slate-800">{{ promedio_por_lote }}</p>
+        <p class="text-xs text-slate-500">Promedio de certificados por lote</p>
+    </div>
+</div>
+
+{{ estados_resumen|json_script:"data-estados" }}
+{{ por_curso|json_script:"data-curso" }}
+{{ tendencia|json_script:"data-tendencia" }}
+{{ top_usuarios|json_script:"data-usuarios" }}
+{{ por_curso_participantes|json_script:"data-participantes" }}
+
+<div class="grid lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <p class="text-sm font-medium text-slate-700 mb-4">Lotes por estado</p>
+        <div class="h-64"><canvas id="grafico-estados"></canvas></div>
+        <div class="mt-4 space-y-1">
+            {% for item in estados_resumen %}
+            <div class="flex justify-between text-xs text-slate-500">
+                <span>{{ item.etiqueta }}</span>
+                <span>{{ item.cantidad }} ({{ item.porcentaje }}%)</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <p class="text-sm font-medium text-slate-700 mb-4">Certificados emitidos por tipo de curso</p>
+        {% if por_curso %}
+        <div style="height: {{ altura_grafico_curso }}px;"><canvas id="grafico-curso"></canvas></div>
+        {% else %}
+        <p class="text-sm text-slate-400">Todavia no hay certificados generados.</p>
+        {% endif %}
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <p class="text-sm font-medium text-slate-700 mb-4">Certificados emitidos por mes (ultimos 6 meses con generacion)</p>
+        {% if tendencia %}
+        <div class="h-64"><canvas id="grafico-tendencia"></canvas></div>
+        {% else %}
+        <p class="text-sm text-slate-400">Todavia no hay certificados generados.</p>
+        {% endif %}
+    </div>
+
+    {% if top_usuarios %}
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <p class="text-sm font-medium text-slate-700 mb-4">Certificados emitidos por usuario</p>
+        <div style="height: {{ altura_grafico_usuarios }}px;"><canvas id="grafico-usuarios"></canvas></div>
+    </div>
+    {% endif %}
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <p class="text-sm font-medium text-slate-700 mb-4">Participantes inscritos por curso</p>
+        <p class="text-xs text-slate-400 -mt-3 mb-4">Incluye lotes en borrador; no depende de que ya se hayan generado los certificados.</p>
+        {% if por_curso_participantes %}
+        <div style="height: {{ altura_grafico_participantes }}px;"><canvas id="grafico-participantes"></canvas></div>
+        {% else %}
+        <p class="text-sm text-slate-400">Todavia no hay participantes registrados.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+(function () {
+    const estados = JSON.parse(document.getElementById('data-estados').textContent);
+    const porCurso = JSON.parse(document.getElementById('data-curso').textContent);
+    const tendencia = JSON.parse(document.getElementById('data-tendencia').textContent);
+    const usuariosEl = document.getElementById('data-usuarios');
+    const usuarios = usuariosEl ? JSON.parse(usuariosEl.textContent) : [];
+    const participantes = JSON.parse(document.getElementById('data-participantes').textContent);
+
+    Chart.defaults.font.size = 12;
+    Chart.defaults.color = '#64748b';
+
+    new Chart(document.getElementById('grafico-estados'), {
+        type: 'doughnut',
+        data: {
+            labels: estados.map(function (e) { return e.etiqueta + ' (' + e.cantidad + ')'; }),
+            datasets: [{
+                data: estados.map(function (e) { return e.cantidad; }),
+                backgroundColor: estados.map(function (e) { return e.color_hex; }),
+                borderColor: '#ffffff',
+                borderWidth: 2,
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } },
+        },
+    });
+
+    if (porCurso.length) {
+        new Chart(document.getElementById('grafico-curso'), {
+            type: 'bar',
+            data: {
+                labels: porCurso.map(function (c) { return c.curso; }),
+                datasets: [{
+                    label: 'Certificados emitidos',
+                    data: porCurso.map(function (c) { return c.cantidad; }),
+                    backgroundColor: '#0d5c3a',
+                    borderRadius: 4,
+                    maxBarThickness: 22,
+                }],
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+            },
+        });
+    }
+
+    if (tendencia.length) {
+        new Chart(document.getElementById('grafico-tendencia'), {
+            type: 'bar',
+            data: {
+                labels: tendencia.map(function (t) {
+                    const fecha = new Date(t.mes);
+                    return fecha.toLocaleDateString('es-BO', { month: 'short', year: 'numeric' });
+                }),
+                datasets: [{
+                    label: 'Certificados emitidos',
+                    data: tendencia.map(function (t) { return t.cantidad; }),
+                    backgroundColor: '#0d5c3a',
+                    borderRadius: 4,
+                    maxBarThickness: 40,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+            },
+        });
+    }
+
+    if (usuarios.length) {
+        new Chart(document.getElementById('grafico-usuarios'), {
+            type: 'bar',
+            data: {
+                labels: usuarios.map(function (u) { return u.propietario__username; }),
+                datasets: [{
+                    label: 'Certificados emitidos',
+                    data: usuarios.map(function (u) { return u.cantidad; }),
+                    backgroundColor: '#475569',
+                    borderRadius: 4,
+                    maxBarThickness: 22,
+                }],
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+            },
+        });
+    }
+
+    if (participantes.length) {
+        new Chart(document.getElementById('grafico-participantes'), {
+            type: 'bar',
+            data: {
+                labels: participantes.map(function (p) { return p.lote__curso; }),
+                datasets: [{
+                    label: 'Participantes inscritos',
+                    data: participantes.map(function (p) { return p.cantidad; }),
+                    backgroundColor: '#0ea5e9',
+                    borderRadius: 4,
+                    maxBarThickness: 22,
+                }],
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+            },
+        });
+    }
+})();
+</script>
+{% endblock %}

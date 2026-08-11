@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Usuarios{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-6 gap-4 flex-wrap">
+    <div>
+        <h1 class="text-xl font-semibold text-slate-800">Usuarios</h1>
+        <p class="text-sm text-slate-500">Administra quien puede generar certificados.</p>
+    </div>
+    <a href="{% url 'crear_usuario' %}" class="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-sm transition shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+        Nuevo usuario
+    </a>
+</div>
+
+{% if usuarios %}
+<!-- Vista de tabla: pantallas medianas y grandes -->
+<div class="hidden md:block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+            <tr>
+                <th class="text-left px-5 py-3 font-medium">Usuario</th>
+                <th class="text-left px-5 py-3 font-medium">Nombre</th>
+                <th class="text-left px-5 py-3 font-medium">Email</th>
+                <th class="text-left px-5 py-3 font-medium">Rol</th>
+                <th class="text-left px-5 py-3 font-medium">Estado</th>
+                <th class="text-right px-5 py-3 font-medium w-32">Acciones</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for u in usuarios %}
+            <tr class="hover:bg-slate-50">
+                <td class="px-5 py-3 font-medium text-slate-800">{{ u.username }}</td>
+                <td class="px-5 py-3 text-slate-600">{{ u.get_full_name|default:"—" }}</td>
+                <td class="px-5 py-3 text-slate-600">{{ u.email|default:"—" }}</td>
+                <td class="px-5 py-3">
+                    <span class="badge {% if u.es_admin %}bg-brand-50 text-brand-700{% else %}bg-slate-100 text-slate-600{% endif %}">
+                        {{ u.get_rol_display }}
+                    </span>
+                </td>
+                <td class="px-5 py-3">
+                    <span class="badge {% if u.is_active %}bg-emerald-50 text-emerald-700{% else %}bg-slate-100 text-slate-500{% endif %}">
+                        {{ u.is_active|yesno:"Activo,Inactivo" }}
+                    </span>
+                </td>
+                <td class="px-5 py-3">
+                    <div class="flex items-center justify-end gap-1">
+                        <a href="{% url 'editar_usuario' u.pk %}" title="Editar usuario"
+                           class="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:text-brand-600 hover:border-brand-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                        </a>
+                        {% if u.pk != request.user.pk %}
+                        <form method="post" action="{% url 'alternar_estado_usuario' u.pk %}"
+                              onsubmit="return confirm('{% if u.is_active %}¿Deshabilitar a {{ u.username|escapejs }}? No podra iniciar sesion hasta que lo vuelvas a habilitar.{% else %}¿Habilitar a {{ u.username|escapejs }}? Podra volver a iniciar sesion.{% endif %}');">
+                            {% csrf_token %}
+                            <button type="submit" title="{% if u.is_active %}Deshabilitar cuenta{% else %}Habilitar cuenta{% endif %}"
+                                    class="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 {% if u.is_active %}hover:text-amber-600 hover:border-amber-200{% else %}hover:text-emerald-600 hover:border-emerald-200{% endif %}">
+                                {% if u.is_active %}
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636a9 9 0 11-12.728 0M12 3v9" /></svg>
+                                {% else %}
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                {% endif %}
+                            </button>
+                        </form>
+                        <a href="{% url 'eliminar_usuario' u.pk %}" title="Eliminar usuario"
+                           class="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                        </a>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+
+<!-- Vista de tarjetas: pantallas pequenas -->
+<div class="md:hidden space-y-3">
+    {% for u in usuarios %}
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+        <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+                <p class="font-medium text-slate-800 truncate">{{ u.username }}</p>
+                <p class="text-sm text-slate-500 truncate">{{ u.get_full_name|default:"—" }}</p>
+                <p class="text-sm text-slate-500 truncate">{{ u.email|default:"—" }}</p>
+            </div>
+            <div class="flex flex-col items-end gap-1.5 shrink-0">
+                <span class="badge {% if u.es_admin %}bg-brand-50 text-brand-700{% else %}bg-slate-100 text-slate-600{% endif %}">
+                    {{ u.get_rol_display }}
+                </span>
+                <span class="badge {% if u.is_active %}bg-emerald-50 text-emerald-700{% else %}bg-slate-100 text-slate-500{% endif %}">
+                    {{ u.is_active|yesno:"Activo,Inactivo" }}
+                </span>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+            <a href="{% url 'editar_usuario' u.pk %}"
+               class="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-lg border border-slate-200 text-slate-600 text-sm hover:text-brand-600 hover:border-brand-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                Editar
+            </a>
+            {% if u.pk != request.user.pk %}
+            <form method="post" action="{% url 'alternar_estado_usuario' u.pk %}" class="flex-1"
+                  onsubmit="return confirm('{% if u.is_active %}¿Deshabilitar a {{ u.username|escapejs }}? No podra iniciar sesion hasta que lo vuelvas a habilitar.{% else %}¿Habilitar a {{ u.username|escapejs }}? Podra volver a iniciar sesion.{% endif %}');">
+                {% csrf_token %}
+                <button type="submit"
+                        class="w-full inline-flex items-center justify-center gap-1.5 h-9 rounded-lg border border-slate-200 text-slate-600 text-sm {% if u.is_active %}hover:text-amber-600 hover:border-amber-200{% else %}hover:text-emerald-600 hover:border-emerald-200{% endif %}">
+                    {% if u.is_active %}
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636a9 9 0 11-12.728 0M12 3v9" /></svg>
+                    Deshabilitar
+                    {% else %}
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Habilitar
+                    {% endif %}
+                </button>
+            </form>
+            <a href="{% url 'eliminar_usuario' u.pk %}" title="Eliminar usuario"
+               class="h-9 w-9 shrink-0 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-200">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-2xl shadow-sm border border-dashed border-slate-300 p-12 text-center">
+    <p class="text-slate-500">Sin usuarios registrados.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}Lista de estudiantes - {{ lote.curso }}{% endblock %}
+{% block content %}
+<div class="mb-6 flex items-start justify-between gap-4 flex-wrap">
+    <div>
+        <a href="{% url 'detalle_lote' lote.pk %}" class="text-sm text-slate-500 hover:text-slate-700">&larr; Volver al lote</a>
+        <h1 class="text-xl font-semibold text-slate-800 mt-2">Lista de estudiantes</h1>
+        <p class="text-sm text-slate-500">Lista de participantes de "{{ lote.curso }}". Revisa que esten correctos antes de generar.</p>
+    </div>
+    {% if analisis %}
+    <a href="{% url 'exportar_reporte' lote.pk %}" class="inline-flex items-center gap-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-sm px-4 py-2.5 rounded-lg shadow-sm transition shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+        Exportar reporte a Excel
+    </a>
+    {% endif %}
+</div>
+
+{% if analisis %}
+<div class="grid sm:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+        <p class="text-2xl font-semibold text-slate-800">{{ analisis.total_filas_con_datos }}</p>
+        <p class="text-xs text-slate-500">Filas con datos en el Excel</p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+        <p class="text-2xl font-semibold text-emerald-600">{{ analisis.total_nombres_validos }}</p>
+        <p class="text-xs text-slate-500">Certificados que se generarian</p>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+        <p class="text-2xl font-semibold {% if analisis.filas_con_advertencias %}text-amber-600{% else %}text-slate-400{% endif %}">
+            {{ analisis.filas_con_advertencias|length }}
+        </p>
+        <p class="text-xs text-slate-500">Filas con advertencias</p>
+    </div>
+</div>
+
+{% if analisis.filas_con_advertencias %}
+<div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6">
+    <p class="text-sm font-medium text-amber-800 mb-1">Se encontraron filas que conviene revisar en tu Excel</p>
+    <p class="text-sm text-amber-700">Estas filas se muestran resaltadas abajo. No impiden generar los certificados, pero podrian producir nombres incorrectos o vacios.</p>
+</div>
+{% endif %}
+
+<details class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mb-6">
+    <summary class="text-sm font-medium text-slate-700 cursor-pointer select-none">Agregar participantes</summary>
+    <p class="text-xs text-slate-500 mt-2 mb-3">Escribe un nombre por linea. Se agregaran a los que ya tiene el lote; recuerda regenerar los certificados despues.</p>
+    <form method="post" action="{% url 'agregar_estudiantes' lote.pk %}">
+        {% csrf_token %}
+        <textarea name="nombres" rows="4" required placeholder="Juan Perez&#10;Maria Gomez"
+                  class="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:outline-none"></textarea>
+        <button type="submit" class="w-full sm:w-auto mt-3 inline-flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-white font-medium text-sm rounded-lg px-4 py-2.5 transition shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            Agregar a la lista
+        </button>
+    </form>
+</details>
+
+{% if analisis.filas %}
+<div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mb-6">
+    <p class="text-sm font-medium text-slate-700 mb-1">Cambiar formato de los nombres</p>
+    <p class="text-xs text-slate-500 mb-3">Aplica el cambio a todos los participantes de la lista; recuerda regenerar los certificados despues.</p>
+    <div class="flex flex-wrap gap-2">
+        <button type="button" data-modo="mayusculas" data-etiqueta="MAYUSCULAS" class="btn-capitalizacion inline-flex items-center gap-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-sm px-4 py-2 rounded-lg transition">MAYUSCULAS</button>
+        <button type="button" data-modo="minusculas" data-etiqueta="minusculas" class="btn-capitalizacion inline-flex items-center gap-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-sm px-4 py-2 rounded-lg transition">minusculas</button>
+        <button type="button" data-modo="titulo" data-etiqueta="Primera Mayuscula" class="btn-capitalizacion inline-flex items-center gap-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-sm px-4 py-2 rounded-lg transition">Primera Mayuscula</button>
+    </div>
+</div>
+{% endif %}
+
+<form id="form-descargar-certificados" method="post" action="{% url 'descargar_certificados' lote.pk %}">{% csrf_token %}</form>
+<form id="form-generar-tras-agregar" method="post" action="{% url 'generar_lote' lote.pk %}">{% csrf_token %}</form>
+<form id="form-capitalizacion" method="post" action="{% url 'cambiar_capitalizacion' lote.pk %}">
+    {% csrf_token %}
+    <input type="hidden" name="modo" id="input-modo-capitalizacion">
+</form>
+
+{% if nombres_con_certificado %}
+<div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
+    <label class="inline-flex items-center gap-2 text-sm text-slate-600">
+        <input type="checkbox" id="chk-seleccionar-todos" class="rounded border-slate-300">
+        Seleccionar todos
+    </label>
+    <button type="submit" form="form-descargar-certificados"
+            class="inline-flex items-center gap-2 bg-slate-700 hover:bg-slate-800 text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-sm transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+        Descargar seleccionados
+    </button>
+</div>
+{% else %}
+<div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-3 text-sm text-slate-500">
+    Todavia no hay certificados individuales generados para descargar. Genera (o regenera) el lote para poder descargarlos aqui.
+</div>
+{% endif %}
+
+<div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wide">
+            <tr>
+                <th class="text-left px-5 py-3 font-medium w-10"></th>
+                <th class="text-left px-5 py-3 font-medium w-20">Fila</th>
+                <th class="text-left px-5 py-3 font-medium">Nombre</th>
+                <th class="text-left px-5 py-3 font-medium w-32">Fecha de registro</th>
+                <th class="text-left px-5 py-3 font-medium">Advertencias</th>
+                <th class="text-left px-5 py-3 font-medium w-16">Eliminar</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for item in analisis.filas %}
+            <tr class="{% if item.advertencias %}bg-amber-50/60{% endif %}">
+                <td class="px-5 py-3">
+                    {% if item.nombre in nombres_con_certificado %}
+                    <input type="checkbox" name="fila" value="{{ item.fila }}" form="form-descargar-certificados"
+                           class="chk-certificado rounded border-slate-300">
+                    {% endif %}
+                </td>
+                <td class="px-5 py-3 text-slate-400">{{ item.fila }}</td>
+                <td class="px-5 py-3">
+                    <form method="post" action="{% url 'editar_estudiante' lote.pk item.fila %}" class="flex items-center gap-2">
+                        {% csrf_token %}
+                        <input type="text" name="valor" value="{{ item.valor_original }}"
+                               class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:outline-none">
+                        <button type="submit" title="Guardar cambio"
+                                class="h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:text-brand-600 hover:border-brand-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                        </button>
+                        {% if item.nombre in nombres_con_certificado %}
+                        <a href="{% url 'descargar_certificado_individual' lote.pk item.fila %}" title="Descargar certificado en PDF"
+                           class="h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:text-brand-600 hover:border-brand-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                        </a>
+                        {% elif item.nombre %}
+                        <button type="submit" formaction="{% url 'generar_certificado_individual' lote.pk item.fila %}" title="Generar certificado de este participante"
+                                class="h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:text-brand-600 hover:border-brand-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                        </button>
+                        {% endif %}
+                    </form>
+                    {% if item.nombre and item.nombre != item.valor_original %}
+                    <p class="text-xs text-slate-400 mt-1">Se generara como: {{ item.nombre }}</p>
+                    {% endif %}
+                </td>
+                <td class="px-5 py-3 text-slate-500 whitespace-nowrap">{{ item.fecha_registro|date:"d/m/Y"|default:"—" }}</td>
+                <td class="px-5 py-3">
+                    {% for advertencia in item.advertencias %}
+                        <span class="badge bg-amber-100 text-amber-800 mb-1">{{ advertencia }}</span>
+                    {% endfor %}
+                </td>
+                <td class="px-5 py-3">
+                    <form method="post" action="{% url 'eliminar_estudiante' lote.pk item.fila %}"
+                          onsubmit="return confirm('¿Eliminar a {{ item.nombre|default:item.valor_original|escapejs }} de la lista?');">
+                        {% csrf_token %}
+                        <button type="submit" title="Eliminar participante"
+                                class="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">Todavia no hay participantes en este lote.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="bg-white rounded-2xl shadow-sm border border-dashed border-slate-300 p-12 text-center">
+    <p class="text-slate-500">Todavia no hay participantes en este lote.</p>
+</div>
+{% endif %}
+
+<script>
+(function () {
+    const chkTodos = document.getElementById('chk-seleccionar-todos');
+    if (chkTodos) {
+        const checkboxes = document.querySelectorAll('.chk-certificado');
+        chkTodos.addEventListener('change', function () {
+            checkboxes.forEach(function (chk) { chk.checked = chkTodos.checked; });
+        });
+    }
+
+    document.querySelectorAll('.btn-capitalizacion').forEach(function (boton) {
+        boton.addEventListener('click', function () {
+            const modo = boton.dataset.modo;
+            const etiqueta = boton.dataset.etiqueta;
+            Swal.fire({
+                icon: 'question',
+                title: `¿Cambiar todos los nombres a ${etiqueta}?`,
+                text: 'Esto afecta a todos los participantes de la lista.',
+                showCancelButton: true,
+                confirmButtonText: 'Si, cambiar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#0d5c3a',
+            }).then(function (resultado) {
+                if (resultado.isConfirmed) {
+                    document.getElementById('input-modo-capitalizacion').value = modo;
+                    document.getElementById('form-capitalizacion').submit();
+                }
+            });
+        });
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    const agregados = parseInt(params.get('agregados'), 10);
+    if (agregados > 0) {
+        params.delete('agregados');
+        const nuevaUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        window.history.replaceState({}, '', nuevaUrl);
+
+        const mensaje = agregados === 1
+            ? 'Se agrego 1 participante a la lista.'
+            : `Se agregaron ${agregados} participantes a la lista.`;
+        Swal.fire({
+            icon: 'success',
+            title: mensaje,
+            text: '¿Deseas generar los certificados ahora para incluirlos?',
+            showCancelButton: true,
+            confirmButtonText: 'Si, generar',
+            cancelButtonText: 'Ahora no',
+            confirmButtonColor: '#0d5c3a',
+        }).then(function (resultado) {
+            if (resultado.isConfirmed) {
+                document.getElementById('form-generar-tras-agregar').submit();
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}
